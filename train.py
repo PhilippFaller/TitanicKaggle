@@ -7,6 +7,7 @@ from keras.utils import to_categorical
 from keras.regularizers import l1_l2
 from math import isnan
 from scipy.stats import pearsonr
+from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import matplotlib.pyplot as plt
@@ -70,15 +71,7 @@ def preprocess(data):
 
     return data
 
-if __name__ == "__main__":
-    dataframe = pd.read_csv("data/train.csv")
-    target = dataframe["Survived"]
-    data = dataframe.drop("Survived", axis=1)
-    data = preprocess(data)
-
-    X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.33, random_state=42)
-
-    #Build Model
+def build_model(data):
     samples, num_features = data.shape
 
     reg_const = 0.003
@@ -90,26 +83,50 @@ if __name__ == "__main__":
 
     model = Model(inputs=inp, outputs=out)
     model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
-    history = model.fit(x=X_train, y=y_train, epochs=200 
+    return model
+
+def train_evaluate(n, i, model, X_train, y_train, X_test, y_test): 
+    history = model.fit(x=X_train, y=y_train, epochs=150
         , validation_data=(X_test, y_test) 
-        )
-
-    model.save('titanic.h5')
-
+        )    
     #Plot
     # summarize history for accuracy
+    plt.subplot(n, 2, 2*i-1)
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
     # summarize history for loss
+    plt.subplot(n, 2, 2*i)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
+    return history
+
+
+if __name__ == "__main__":
+    dataframe = pd.read_csv("data/train.csv")
+    target = dataframe["Survived"]
+    data = dataframe.drop("Survived", axis=1)
+    data = preprocess(data)
+    
+    n_folds = 3
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
+
+    cvacc = []
+    for i, (train, test) in enumerate(skf.split(data, target)):
+        print("Running Fold" + str(i+1) + "/" + str(n_folds))
+        model = None # Clearing the NN.
+        model = build_model(data)
+        h = train_evaluate(n_folds, i+1, model, data.reindex(train), target.reindex(train), data.reindex(test), target.reindex(test))
+        cvacc.append(h.history["acc"][-1])
+
+    print("Mean acc: " + str(np.mean(cvacc)) +" -/+ " + str(np.std(cvacc)))
+    model.save('titanic.h5')
     plt.show()
+
