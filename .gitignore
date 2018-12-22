@@ -1,0 +1,4 @@
+*.h5
+data/*
+__pychache__/*
+*.csv
