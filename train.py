@@ -17,10 +17,11 @@ def preprocess(data):
     data["Mr"] = data["Name"].apply(lambda name: 1 if "Mr" in name else 0)
     data["Miss"] = data["Name"].apply(lambda name: 1 if "Miss" in name else 0)
     data["Mrs"] = data["Name"].apply(lambda name: 1 if "Mrs" in name else 0)
-    data["Dr"] = data["Name"].apply(lambda name: 1 if "Dr" in name else 0)
-    data["Master"] = data["Name"].apply(lambda name: 1 if "Master" in name else 0)
-    data["Rev"] = data["Name"].apply(lambda name: 1 if "Rev" in name else 0)
-    data["Soldier"] = data["Name"].apply(lambda name: 1 if ("Major" in name or "Capt" in name or "Col" in name) else 0)
+    #data["Dr"] = data["Name"].apply(lambda name: 1 if "Dr" in name else 0)
+    #data["Master"] = data["Name"].apply(lambda name: 1 if "Master" in name else 0)
+    #data["Rev"] = data["Name"].apply(lambda name: 1 if "Rev" in name else 0)
+    #data["Soldier"] = data["Name"].apply(lambda name: 1 if ("Major" in name or "Capt" in name or "Col" in name) else 0)
+    data["Title"] = data["Name"].apply(lambda name: 1 if any([t in name for t in ["Major","Capt","Col","Rev","Master","Dr"]]) else 0)
 
     #Fix format
     data["Sex"] = data["Sex"].apply(lambda sex: 0 if sex=="male" else 1)
@@ -43,12 +44,18 @@ def preprocess(data):
     data["Age"] = data["Age"].apply(lambda a: -1 if isnan(a) else a)
 
     #New feature
-    data["Traveled Free"] = data["Fare"].apply(lambda x: 1 if x==0 else 0)
+    #data["Traveled Free"] = data["Fare"].apply(lambda x: 1 if x==0 else 0)
+
+    #Truncate Outliers
+    data["SibSp"] = data["SibSp"].apply(lambda s: min(4, s))
+    data["Parch"] = data["Parch"].apply(lambda s: min(3, s))
+    data["Fare"] = data["Fare"].apply(lambda s: np.log(s+1))
 
     #Scale
     s = MinMaxScaler()
     keys = data.keys()
     data = pd.DataFrame(data=s.fit_transform(data.values), columns=keys)
+
 
     #Cross features
 
@@ -63,12 +70,21 @@ def preprocess(data):
                 print(x + " x " + y)
     """
 
+    #Cross features just noise?
+    """
     data["Sex x Age"] = data["Sex"]*data["Age"]
     data["Sex x Age_valid"] = data["Sex"]*data["Age_valid"]
     data["Sex x Fare"] = data["Sex"]*data["Fare"]
     data["Sex x 1st"] = data["Sex"]*data["1st"]
     data["Sex x 2nd"] = data["Sex"]*data["2nd"]
-
+    """
+    """
+    for k in data.keys():
+        data[k].hist()
+        plt.title(k)
+        plt.show()
+    
+    """
     return data
 
 def build_model(data):
@@ -86,12 +102,12 @@ def build_model(data):
     return model
 
 def train_evaluate(n, i, model, X_train, y_train, X_test, y_test): 
-    history = model.fit(x=X_train, y=y_train, epochs=150
+    history = model.fit(x=X_train, y=y_train, epochs=200
         , validation_data=(X_test, y_test) 
         )    
     #Plot
     # summarize history for accuracy
-    plt.subplot(n, 2, 2*i-1)
+    plt.subplot(n, 3, 3*i-2)
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     plt.title('model accuracy')
@@ -99,13 +115,16 @@ def train_evaluate(n, i, model, X_train, y_train, X_test, y_test):
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     # summarize history for loss
-    plt.subplot(n, 2, 2*i)
+    plt.subplot(n, 3, 3*i-1)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
+    #detect outliers
+    plt.subplot(n, 3, 3*i)
+    plt.scatter(model.predict(X_train), y_train)
     return history
 
 
@@ -115,7 +134,7 @@ if __name__ == "__main__":
     data = dataframe.drop("Survived", axis=1)
     data = preprocess(data)
     
-    n_folds = 3
+    n_folds = 5
     skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
 
     cvacc = []
