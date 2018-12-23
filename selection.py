@@ -11,6 +11,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
 def preprocess(data):
     #Title info from names
@@ -25,19 +26,29 @@ def preprocess(data):
 
     #Fix format
     data["Sex"] = data["Sex"].apply(lambda sex: 0 if sex=="male" else 1)
+
+    data["Cabin"] = data["Cabin"].apply(lambda c: c if isinstance(c, str) else "-1")
+    data["Cabin Letter"] = data["Cabin"].apply(lambda c: max([i if letter in c else 3 for i, letter in enumerate("ABCDDEFG")]) -3 )
+    data["Cabin Letter Valid"] = data["Cabin Letter"].apply(lambda l: 0 if l==0 else 1)
+    data["Cabin Num"] = data["Cabin"].apply(lambda c: int(next(iter(re.findall("\d+", c)), "-1")))
+    data["Cabin Num Valid"] = data["Cabin Num"].apply(lambda n: 0 if n==-1 else 1)
+    data["Multiple Cabins"] = data["Cabin"].apply(lambda c: 1 if len(c.split()) > 1 else 0)
+
     #Drop useless
     data = data.drop("Ticket", axis=1)
     data = data.drop("Cabin", axis=1)
     data = data.drop("PassengerId", axis=1)
     data = data.drop("Name", axis=1)
+
     #Categorize
     data["1st"] = data["Pclass"].apply(lambda t: 1 if t == 1 else 0)
     data["2nd"] = data["Pclass"].apply(lambda t: 1 if t == 2 else 0)
     data["3rd"] = data["Pclass"].apply(lambda t: 1 if t == 3 else 0)
     data = data.drop("Pclass", axis=1)
-    data["Embarked"] = data["Embarked"].apply(lambda s: 1 if s == "C" else 0)
-    data["Embarked"] = data["Embarked"].apply(lambda s: 1 if s == "Q" else 0)
-    data["Embarked"] = data["Embarked"].apply(lambda s: 1 if s == "S" else 0)
+    #Just noise
+    #data["Cherbourg"] = data["Embarked"].apply(lambda s: 1 if s == "C" else 0)
+    #data["Queenstown"] = data["Embarked"].apply(lambda s: 1 if s == "Q" else 0)
+    #data["Southampton"] = data["Embarked"].apply(lambda s: 1 if s == "S" else 0)
     data = data.drop("Embarked", axis=1)
     #Sanitize
     data["Age_valid"] = data["Age"].apply(lambda a: 0 if isnan(a) else 1)
@@ -56,7 +67,6 @@ def preprocess(data):
     s = MinMaxScaler()
     keys = data.keys()
     data = pd.DataFrame(data=s.fit_transform(data.values), columns=keys)
-
 
     #Cross features
 
@@ -79,12 +89,12 @@ def preprocess(data):
     data["Sex x 1st"] = data["Sex"]*data["1st"]
     data["Sex x 2nd"] = data["Sex"]*data["2nd"]
     """
+
     """
     for k in data.keys():
         data[k].hist()
         plt.title(k)
         plt.show()
-    
     """
     return data
 
@@ -122,8 +132,8 @@ def train_evaluate(n, i, model, X_train, y_train, X_test, y_test):
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     #detect outliers
-    plt.subplot(n, 3, 3*i)
-    plt.scatter(model.predict(X_train), y_train)
+    #plt.subplot(n, 3, 3*i)
+    #plt.scatter(model.predict(X_train), y_train)
     return history
 
 
