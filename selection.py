@@ -15,7 +15,7 @@ import re
 
 def preprocess(data):
     #Title info from names
-    data["Mr"] = data["Name"].apply(lambda name: 1 if "Mr" in name else 0)
+    data["Mr"] = data["Name"].apply(lambda name: 1 if "Mr" in name and not "Mrs" in name else 0)
     data["Miss"] = data["Name"].apply(lambda name: 1 if "Miss" in name else 0)
     data["Mrs"] = data["Name"].apply(lambda name: 1 if "Mrs" in name else 0)
     #data["Dr"] = data["Name"].apply(lambda name: 1 if "Dr" in name else 0)
@@ -67,7 +67,7 @@ def preprocess(data):
     #Scale
     s = MinMaxScaler()
     keys = data.keys()
-    data = pd.DataFrame(data=s.fit_transform(data.values), columns=keys)
+    data[data.keys()] = s.fit_transform(data[data.keys()])
 
     #Cross features
 
