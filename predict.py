@@ -5,7 +5,6 @@ from math import isnan
 
 dataframe = pd.read_csv("data/test.csv")
 p_ids = dataframe["PassengerId"]
-dataframe["Fare"] = dataframe["Fare"].apply(lambda x: dataframe["Fare"].mean() if isnan(x) else x)
 data = preprocess(dataframe)
 model = load_model('titanic.h5')
 prediction = model.predict(data)
