@@ -27,11 +27,12 @@ def preprocess(data):
     #Fix format
     data["Sex"] = data["Sex"].apply(lambda sex: 0 if sex=="male" else 1)
 
-    data["Cabin"] = data["Cabin"].apply(lambda c: c if isinstance(c, str) else "-1")
+    #useless noise
+    data["Cabin"] = data["Cabin"].apply(lambda c: c if isinstance(c, str) else "0")
     data["Cabin Letter"] = data["Cabin"].apply(lambda c: max([i if letter in c else 3 for i, letter in enumerate("ABCDDEFG")]) -3 )
     data["Cabin Letter Valid"] = data["Cabin Letter"].apply(lambda l: 0 if l==0 else 1)
-    data["Cabin Num"] = data["Cabin"].apply(lambda c: int(next(iter(re.findall("\d+", c)), "-1")))
-    data["Cabin Num Valid"] = data["Cabin Num"].apply(lambda n: 0 if n==-1 else 1)
+    #data["Cabin Num"] = data["Cabin"].apply(lambda c: int(next(iter(re.findall("\d+", c)), "0")))
+    #data["Cabin Num Valid"] = data["Cabin Num"].apply(lambda n: 0 if n==0 else 1)
     data["Multiple Cabins"] = data["Cabin"].apply(lambda c: 1 if len(c.split()) > 1 else 0)
 
     #Drop useless
@@ -55,7 +56,7 @@ def preprocess(data):
     data["Age"] = data["Age"].apply(lambda a: -1 if isnan(a) else a)    
     data["Fare"] = data["Fare"].apply(lambda x: data["Fare"].mean() if isnan(x) else x)
 
-    #New feature
+    #Just noise
     #data["Traveled Free"] = data["Fare"].apply(lambda x: 1 if x==0 else 0)
 
     #Truncate Outliers
@@ -89,7 +90,6 @@ def preprocess(data):
     data["Sex x 1st"] = data["Sex"]*data["1st"]
     data["Sex x 2nd"] = data["Sex"]*data["2nd"]
     """
-
     """
     for k in data.keys():
         data[k].hist()
@@ -112,7 +112,7 @@ def build_model(data):
 
 def train_evaluate(n, i, model, X_train, y_train, X_test, y_test): 
     history = model.fit(x=X_train, y=y_train, epochs=200
-        , validation_data=(X_test, y_test) 
+        , validation_data=(X_test, y_test) , verbose=0
         )    
     #Plot
     # summarize history for accuracy
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     cvacc = []
     cvvalacc = []
     for i, (train, test) in enumerate(skf.split(data, target)):
-        print("Running Fold" + str(i+1) + "/" + str(n_folds))
+        print("Running Fold " + str(i+1) + "/" + str(n_folds))
         model = None # Clearing the NN.
         model = build_model(data)
         h = train_evaluate(n_folds, i+1, model, data.reindex(train), target.reindex(train), data.reindex(test), target.reindex(test))
