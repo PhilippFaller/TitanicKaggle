@@ -90,11 +90,9 @@ def preprocess(data):
 def build_model(data):
     samples, num_features = data.shape
 
-    reg_const = 0.003
+    reg_const = 0.0005
     inp = Input(shape=(num_features,))
-    hidden = Dense(2*num_features, activation="relu", kernel_regularizer=l1_l2(l1=reg_const, l2=reg_const))(inp)
-    hidden = Dense(2*num_features, activation="relu", kernel_regularizer=l1_l2(l1=reg_const, l2=reg_const))(hidden)
-    hidden = Dense(num_features, activation="relu", kernel_regularizer=l1_l2(l1=reg_const, l2=reg_const))(hidden)
+    hidden = Dense(num_features, activation="relu", kernel_regularizer=l1_l2(l1=reg_const, l2=reg_const))(inp)
     out = Dense(1, activation="sigmoid")(hidden)
 
     model = Model(inputs=inp, outputs=out)
@@ -138,14 +136,16 @@ if __name__ == "__main__":
     skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
 
     cvacc = []
+    cvvalacc = []
     for i, (train, test) in enumerate(skf.split(data, target)):
         print("Running Fold" + str(i+1) + "/" + str(n_folds))
         model = None # Clearing the NN.
         model = build_model(data)
         h = train_evaluate(n_folds, i+1, model, data.reindex(train), target.reindex(train), data.reindex(test), target.reindex(test))
         cvacc.append(h.history["acc"][-1])
+        cvvalacc.append(h.history["val_acc"][-1])
 
     print("Mean acc: " + str(np.mean(cvacc)) +" -/+ " + str(np.std(cvacc)))
-    model.save('titanic.h5')
+    print("Mean val_acc: " + str(np.mean(cvvalacc)) +" -/+ " + str(np.std(cvvalacc)))
     plt.show()
 
